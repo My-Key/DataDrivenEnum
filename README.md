@@ -25,6 +25,10 @@ Defined values will be visible in dropdowns. `IDDEnumValue` behaves like enum an
 
 ![](Images/MaskDropdown.png) ![](Images/ValueDropdown.png)
 
+`IDDEnumValue` and `IDDEnumMask` have defined validators that check if there are used undefined or obsolete values.
+
+![](Images/Validators.PNG)
+
 ## `IDDEnumMask` extension methods
 
 - Contains - checks if `IDDEnumMask` contains `IDDEnumValue`
