@@ -23,6 +23,7 @@ namespace DDEnum
 			public string Name => m_name;
 			
 			[SerializeField, MultiLineProperty, OnValueChanged(nameof(ClearMessage))]
+			[EnableIf(nameof(m_name))]
 			private string m_tooltip;
 			public string Tooltip => m_tooltip;
 
@@ -64,20 +65,24 @@ namespace DDEnum
 
 			[SerializeField] 
 			[TableColumnWidth(100, false)]
+			[EnableIf(nameof(m_name))]
 			private SdfIconType m_icon = SdfIconType.None;
 			public SdfIconType Icon => m_icon;
 			
 			[SerializeField, OnValueChanged(nameof(ClearMessage))]
 			[HorizontalGroup("Obsolete", width:25f)]
 			[HideLabel]
+			[EnableIf(nameof(m_name))]
 			private bool m_obsolete = false;
 			public bool Obsolete => m_obsolete;
 			
-			[SerializeField, MultiLineProperty, ShowIf(nameof(m_obsolete)), OnValueChanged(nameof(ClearMessage))] 
+			[SerializeField, MultiLineProperty, EnableIf(nameof(ShowObsoleteMessage)), OnValueChanged(nameof(ClearMessage))] 
 			[HorizontalGroup("Obsolete")]
 			[HideLabel]
 			private string m_obsoleteMessage;
 			public string ObsoleteMessage => m_obsoleteMessage;
+			
+			private  bool ShowObsoleteMessage => m_obsolete && !string.IsNullOrWhiteSpace(m_name);
 		}
 		
 #if UNITY_EDITOR

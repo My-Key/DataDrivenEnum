@@ -12,7 +12,7 @@ Put `DDEnum` folder into Unity project
 
 You need to create class that inherits frim `DDEnumAssetBase` and 2 structs that inherit from `IDDEnumMask` and `IDDEnumValue`.
 
-Then you need to create new scriptable object asset, where values will be defined, by opening `Tools/Data Driven Enums` and then clicking `Create DDEnum asset` button. This asset will be automatically added to Preloaded Assets in `PlayerSettings`.
+Then you need to create new scriptable object asset, where values will be defined, by opening `Tools/Data Driven Enums` and then clicking `Create DDEnum asset` button. This asset will be automatically added to Preloaded Assets in `PlayerSettings`. You can defne up to 64 values.
 
 ![](Images/EnumWindow.PNG)
 
@@ -21,7 +21,7 @@ Each value with defined name can have:
 - icon
 - info about obsoletion
 
-Defined values will be visible in dropdowns when using `IDDEnumMask` and `IDDEnumValue`
+Defined values will be visible in dropdowns. `IDDEnumValue` behaves like enum and `IDDEnumMask` behaves like enum with `Flags` attribute.
 
 ![](Images/MaskDropdown.png) ![](Images/ValueDropdown.png)
 
