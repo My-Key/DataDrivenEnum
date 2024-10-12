@@ -29,6 +29,12 @@ Defined values will be visible in dropdowns. `IDDEnumValue` behaves like enum an
 
 ![](Images/Validators.PNG)
 
+## `EnumToggleButtons` attribute (recently added)
+
+`IDDEnumValue` and `IDDEnumMask` supports `EnumToggleButtons` attribute to display as a list of buttons. Buttons are grouped by path in value name, for example `Group/ValueInGroup` and `Group/ValueWithIcon` will be displayed as a separate group, indented and with a title, as seen in the picture bellow. Creating or renaming group will not be updated immediately in inspector, in such case select different object and select original to recreate inspector.
+
+![](Images/EnumToggleButtons.PNG)
+
 ## `IDDEnumMask` extension methods
 
 - Contains - checks if `IDDEnumMask` contains `IDDEnumValue`
@@ -52,6 +58,10 @@ Defined values will be visible in dropdowns. `IDDEnumValue` behaves like enum an
 - Decremented - returns new `IDDEnumValue` with value decremented to previous defined value
 - Incremented - returns new `IDDEnumValue` with value incremented to next defined value in `IDDEnumMask`
 - Decremented - returns new `IDDEnumValue` with value decremented to previous defined value in `IDDEnumMask`
+
+## `DDEnumAssetBase`
+
+You can override `GetIcon` method to change icon next to name of the asset in the editor window.
 
 ## Example
 
