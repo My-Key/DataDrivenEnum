@@ -32,7 +32,8 @@ namespace DDEnum
 				m_message = null;
 			}
 
-			private string m_message;
+			[NonSerialized] 
+			private string m_message = null;
 			
 			public string Message
 			{
@@ -80,9 +81,8 @@ namespace DDEnum
 			[HorizontalGroup("Obsolete")]
 			[HideLabel]
 			private string m_obsoleteMessage;
-			public string ObsoleteMessage => m_obsoleteMessage;
 			
-			private  bool ShowObsoleteMessage => m_obsolete && !string.IsNullOrWhiteSpace(m_name);
+			private bool ShowObsoleteMessage => m_obsolete && !string.IsNullOrWhiteSpace(m_name);
 		}
 		
 #if UNITY_EDITOR
@@ -156,10 +156,8 @@ namespace DDEnum
 			}
 		}
 
-		public IEnumerable<string> ValidNames =>
-			m_values.Where(s => !string.IsNullOrWhiteSpace(s.Name)).Select(s => s.Name);
-
-		public IEnumerable<int> ValidBits => ValidNames.Select(x => Array.IndexOf(m_values.Select(s => s.Name).ToArray(), x));
+		public IEnumerable<int> ValidBits => 
+			m_values.Where(s => !string.IsNullOrWhiteSpace(s.Name)).Select(x => Array.IndexOf(m_values, x));
 
 		public string IndexToName(int index) => IndexToEntry(index).Name;
 		
