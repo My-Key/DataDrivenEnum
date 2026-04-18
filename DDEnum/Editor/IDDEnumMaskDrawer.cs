@@ -261,6 +261,11 @@ namespace DDEnum.Editor
 
 				EditorGUILayout.EndHorizontal();
 			}
+
+			var rect = EditorGUILayout.GetControlRect(false, GUILayout.Height(24));
+				
+			if (SirenixEditorGUI.SDFIconButton(rect, $"Edit {typeof(TDDEnumAsset)} asset", SdfIconType.GearFill))
+				DDEnumWindow.OpenAndSelect(DDEnumAssetBase<TDDEnumAsset>.Instance);
 			
 			base.DrawSelectionTree();
 		}

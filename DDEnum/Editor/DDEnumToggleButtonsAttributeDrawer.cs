@@ -2,14 +2,14 @@
 using System.Linq;
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
-using Sirenix.Utilities;
 using Sirenix.Utilities.Editor;
 using UnityEditor;
 using UnityEngine;
 
 namespace DDEnum.Editor
 {
-	public abstract class DDEnumToggleButtonsAttributeDrawerBase<TDDEnumAsset, TType> : OdinAttributeDrawer<EnumToggleButtonsAttribute, TType> 
+	public abstract class DDEnumToggleButtonsAttributeDrawerBase<TDDEnumAsset, TType> :
+		OdinAttributeDrawer<EnumToggleButtonsAttribute, TType>, IDefinesGenericMenuItems
 		where TDDEnumAsset : DDEnumAssetBase<TDDEnumAsset>
 	{
 		private static readonly Color OBSOLETE_COLOR = new Color(1f,0.7f,0.7f);
@@ -374,6 +374,13 @@ namespace DDEnum.Editor
 		protected abstract bool IsSelected(int bitIndex);
 
 		protected abstract void Select(int bitIndex);
+
+		public void PopulateGenericMenu(InspectorProperty property, GenericMenu genericMenu)
+		{
+			genericMenu.AddItem(new GUIContent($"Edit {typeof(TDDEnumAsset)} asset"), false, OpenAsset);
+		}
+
+		private void OpenAsset() => DDEnumWindow.OpenAndSelect(DDEnumAssetBase<TDDEnumAsset>.Instance);
 	}
 
 	[DrawerPriority(DrawerPriorityLevel.AttributePriority)]

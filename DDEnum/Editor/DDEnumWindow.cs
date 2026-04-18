@@ -4,6 +4,7 @@ using System.Linq;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.Utilities.Editor;
 using UnityEditor;
+using UnityEditor.Callbacks;
 using UnityEngine;
 
 namespace DDEnum.Editor
@@ -11,7 +12,27 @@ namespace DDEnum.Editor
 	public class DDEnumWindow : OdinMenuEditorWindow
 	{
 		[MenuItem("Tools/Data Driven Enums")]
-		public static void OpenWindow() => GetWindow<DDEnumWindow>("Data Driven Enums").Show();
+		public static DDEnumWindow OpenWindow()
+		{
+			var window =  GetWindow<DDEnumWindow>("Data Driven Enums");
+			window.Show();
+
+			return window;
+		}
+
+		[OnOpenAsset(1)]
+		public static bool OpenAsset(int instanceID, int line) => OpenAssetBase(instanceID, line);
+		
+		protected static bool OpenAssetBase(int instanceID, int line)
+		{
+			if (EditorUtility.InstanceIDToObject(instanceID) is not DDEnumAssetBase asset)
+				return false;
+
+			OpenAndSelect(asset);
+			return true;
+		}
+
+		public static void OpenAndSelect(DDEnumAssetBase objectBase) => OpenWindow().TrySelectMenuItemWithObject(objectBase);
 
 		protected override OdinMenuTree BuildMenuTree()
 		{
