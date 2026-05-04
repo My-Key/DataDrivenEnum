@@ -27,7 +27,7 @@ namespace DDEnum.Editor
 		private List<int> m_selectedIndexes = new List<int>();
 
 		private bool m_hasSubset;
-		protected ValueResolver<TMask> m_subsetResolver;
+		protected ValueResolver<IEnumerable<int>> m_subsetResolver;
 
 		protected override void Initialize()
 		{
@@ -39,7 +39,7 @@ namespace DDEnum.Editor
 			m_hasSubset = subset != null;
 
 			if (subset != null)
-				m_subsetResolver = ValueResolver.Get<TMask>(Property, subset.Subset);
+				m_subsetResolver = ValueResolver.Get<IEnumerable<int>>(Property, subset.Subset, DDEnumAssetBase<TDDEnumAsset>.Instance.ValidBits);
 		}
 
 		private void UpdateButtonText()
@@ -112,7 +112,7 @@ namespace DDEnum.Editor
 			var hasSubset = m_hasSubset && !m_subsetResolver.HasError;
 
 			var selector = hasSubset
-				? new DDEnumSelector<TDDEnumAsset>(true, m_subsetResolver.GetValue().Select(x => x.Value))
+				? new DDEnumSelector<TDDEnumAsset>(true, m_subsetResolver.GetValue())
 				: new DDEnumSelector<TDDEnumAsset>(true);
 
 			var currentValue = ValueEntry.SmartValue.Value;
@@ -122,7 +122,7 @@ namespace DDEnum.Editor
 			var validBits = DDEnumAssetBase<TDDEnumAsset>.Instance.ValidBits;
 
 			if (hasSubset)
-				validBits = m_subsetResolver.GetValue().Select(x => x.Value);
+				validBits = m_subsetResolver.GetValue();
 
 			foreach (var validBit in validBits)
 			{
@@ -172,13 +172,13 @@ namespace DDEnum.Editor
 	{
 		private readonly FieldInfo m_requestCheckboxUpdate;
 
-		private List<int> m_validBits;
+		private IEnumerable<int> m_validBits;
 		
 		public DDEnumSelector(bool multiSelect, IEnumerable<int> bits) : base(DDEnumAssetBase<TDDEnumAsset>.Instance.name,
 			bits, multiSelect, GetMenuItemName)
 		{
 			CheckboxToggle = multiSelect;
-			m_validBits = bits.ToList();
+			m_validBits = bits;
 			
 			m_requestCheckboxUpdate = typeof(GenericSelector<int>).GetField("requestCheckboxUpdate",
 				BindingFlags.NonPublic | BindingFlags.Instance);
@@ -188,7 +188,7 @@ namespace DDEnum.Editor
 			DDEnumAssetBase<TDDEnumAsset>.Instance.ValidBits, multiSelect, GetMenuItemName)
 		{
 			CheckboxToggle = multiSelect;
-			m_validBits = DDEnumAssetBase<TDDEnumAsset>.Instance.ValidBits.ToList();
+			m_validBits = DDEnumAssetBase<TDDEnumAsset>.Instance.ValidBits;
 			
 			m_requestCheckboxUpdate = typeof(GenericSelector<int>).GetField("requestCheckboxUpdate",
 				BindingFlags.NonPublic | BindingFlags.Instance);
@@ -234,7 +234,7 @@ namespace DDEnum.Editor
 			}
 
 			menuItem.SdfIcon = entry.Icon;
-			menuItem.SdfIconColor = Color.white;
+			menuItem.SdfIconColor = entry.Obsolete ? Color.red : Color.white;
 		}
 
 		private void DrawInfo(OdinMenuItem thisMenuItem)

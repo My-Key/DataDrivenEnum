@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace DDEnum
 {
-	public interface IDDEnumValue<T, TValue> : IEquatable<IDDEnumValue<T, TValue>> 
+	public interface IDDEnumValue<T, TValue> : IEquatable<IDDEnumValue<T, TValue>>
 		where T : DDEnumAssetBase<T>
 		where TValue : struct, IDDEnumValue<T, TValue>
 	{
@@ -25,7 +25,7 @@ namespace DDEnum
 		protected static long GetBitValue(IDDEnumValue<T, TValue> value) => 1L << value.Value;
 	}
 	
-	public interface IDDEnumMask<T, TValue, TMaskValue> : IEquatable<IDDEnumMask<T, TValue, TMaskValue>>, IEnumerable<TValue>
+	public interface IDDEnumMask<T, TValue, TMaskValue> : IEquatable<IDDEnumMask<T, TValue, TMaskValue>>, IEnumerable<int>
 		where T : DDEnumAssetBase<T>
 		where TValue : struct, IDDEnumValue<T, TValue>
 		where TMaskValue : struct, IDDEnumMask<T, TValue, TMaskValue>
@@ -34,6 +34,8 @@ namespace DDEnum
 		/// Get value of mask
 		/// </summary>
 		public long Value { get; set; }
+
+		public IEnumerator<TValue> GetValueEnumerator();
 		
 		/// <summary>
 		/// Enumerator of <see cref="IDDEnumMask{T,TValue}"/> that returns <see cref="IDDEnumValue{T}"/>
@@ -77,6 +79,46 @@ namespace DDEnum
 					return output;
 				}
 			}
+
+			object IEnumerator.Current => Current;
+
+			void IDisposable.Dispose() { }
+		}
+		
+		/// <summary>
+		/// Enumerator of <see cref="IDDEnumMask{T,TValue}"/> that returns <see cref="int"/>
+		/// </summary>
+		public struct SetValuesIntEnumerator : IEnumerator<int>
+		{
+			private readonly long m_mask;
+			private readonly int m_max;
+			private int m_current;
+
+			public SetValuesIntEnumerator(long mask, int max = 63)
+			{
+				m_mask = mask;
+				m_max = Mathf.Min(max, 63);
+				m_current = -1;
+			}
+
+			public SetValuesIntEnumerator GetEnumerator() => this;
+
+			public bool MoveNext()
+			{
+				while (m_current < m_max)
+				{
+					if ((m_mask & (1L << ++m_current)) == 0L)
+						continue;
+				
+					return true;
+				}
+
+				return false;
+			}
+
+			public void Reset() => m_current = -1;
+
+			public int Current => m_current;
 
 			object IEnumerator.Current => Current;
 
@@ -242,6 +284,15 @@ namespace DDEnum
 			where TMask : struct, IDDEnumMask<T, TValue, TMask>
 		{
 			return new IDDEnumMask<T,TValue,TMask>.SetValuesEnumerator(mask.Value, DDEnumAssetBase<T>.Instance.MaxValueIndex);
+		}
+		
+		/// <returns>Enumerator of <typeparamref name="TValue"/> of all set bits in <paramref name="mask"/></returns>
+		public static IEnumerator<int> GetValuesIntEnumerator<T, TValue, TMask>(this IDDEnumMask<T, TValue, TMask> mask)
+			where T : DDEnumAssetBase<T>
+			where TValue :  struct, IDDEnumValue<T, TValue>
+			where TMask : struct, IDDEnumMask<T, TValue, TMask>
+		{
+			return new IDDEnumMask<T,TValue,TMask>.SetValuesIntEnumerator(mask.Value, DDEnumAssetBase<T>.Instance.MaxValueIndex);
 		}
 
 		/// <returns>New <typeparamref name="TValue"/> with next value counting from <paramref name="value"/></returns>

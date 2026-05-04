@@ -18,6 +18,9 @@ namespace DDEnum.Editor
 		private float m_previousControlRectWidth;
 		
 		private ButtonContentGroup m_buttonContentGroup;
+		
+		private bool m_hasSubset;
+		protected ValueResolver<IEnumerable<int>> m_subsetResolver;
 
 		private class ButtonContent
 		{
@@ -225,6 +228,12 @@ namespace DDEnum.Editor
 			m_buttonContentGroup = new ButtonContentGroup();
 			
 			CreateButtons(validBits, instance);
+			
+			var subset = Property.GetAttribute<SubsetAttribute>();
+			m_hasSubset = subset != null;
+			
+			if (subset != null)
+				m_subsetResolver = ValueResolver.Get<IEnumerable<int>>(Property, subset.Subset, DDEnumAssetBase<TDDEnumAsset>.Instance.ValidBits);
 		}
 
 		private void CreateButtons(IEnumerable<int> validBits, TDDEnumAsset instance)
@@ -245,7 +254,7 @@ namespace DDEnum.Editor
 		private void UpdateNames()
 		{
 			var instance = DDEnumAssetBase<TDDEnumAsset>.Instance;
-			IEnumerable<int> validBits = GetBits();
+			var validBits = GetBits();
 			var count = validBits.Count();
 
 			var needToRecalculateRows = false;
@@ -268,6 +277,9 @@ namespace DDEnum.Editor
 
 		protected override void DrawPropertyLayout(GUIContent label)
 		{
+			if (m_hasSubset)
+				m_subsetResolver.DrawError();
+			
 			if (Event.current.type != EventType.Layout)
 				UpdateNames();
 			
@@ -376,7 +388,12 @@ namespace DDEnum.Editor
 
 		protected abstract void Select(int bitIndex);
 		
-		protected abstract IEnumerable<int> GetBits();
+		protected IEnumerable<int> GetBits()
+		{
+			if (m_hasSubset && !m_subsetResolver.HasError)
+				return m_subsetResolver.GetValue();
+			
+			return DDEnumAssetBase<TDDEnumAsset>.Instance.ValidBits;}
 
 		public void PopulateGenericMenu(InspectorProperty property, GenericMenu genericMenu)
 		{
@@ -399,12 +416,6 @@ namespace DDEnum.Editor
 			valueEntrySmartValue.Value = bitIndex;
 			ValueEntry.SmartValue = valueEntrySmartValue;
 		}
-
-		protected override IEnumerable<int> GetBits()
-		{
-			var instance = DDEnumAssetBase<TDDEnumAsset>.Instance;
-			return instance.ValidBits;
-		}
 	}
 	
 
@@ -414,21 +425,6 @@ namespace DDEnum.Editor
 		where TValue : struct, IDDEnumValue<TDDEnumAsset, TValue>
 		where TMask : struct, IDDEnumMask<TDDEnumAsset, TValue, TMask>
 	{
-		
-		private bool m_hasSubset;
-		protected ValueResolver<TMask> m_subsetResolver;
-
-		protected override void Initialize()
-		{
-			base.Initialize();
-			
-			var subset = Property.GetAttribute<SubsetAttribute>();
-			m_hasSubset = subset != null;
-
-			if (subset != null)
-				m_subsetResolver = ValueResolver.Get<TMask>(Property, subset.Subset);
-		}
-
 		protected override bool IsSelected(int bitIndex) => (ValueEntry.SmartValue.Value & (1L << bitIndex)) != 0L;
 		
 		protected override void Select(int bitIndex)
@@ -436,23 +432,6 @@ namespace DDEnum.Editor
 			var valueEntrySmartValue = ValueEntry.SmartValue;
 			valueEntrySmartValue.Value ^= 1L << bitIndex;
 			ValueEntry.SmartValue = valueEntrySmartValue;
-		}
-
-		protected override void DrawPropertyLayout(GUIContent label)
-		{
-			if (m_hasSubset)
-				m_subsetResolver.DrawError();
-			
-			base.DrawPropertyLayout(label);
-		}
-
-		protected override IEnumerable<int> GetBits()
-		{
-			if (m_hasSubset && !m_subsetResolver.HasError)
-				return m_subsetResolver.GetValue().Select(x => x.Value);
-			
-			var instance = DDEnumAssetBase<TDDEnumAsset>.Instance;
-			return instance.ValidBits;
 		}
 	}
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 using Sirenix.OdinInspector.Editor.Drawers;
+using Sirenix.OdinInspector.Editor.ValueResolvers;
 using Sirenix.Utilities;
 using UnityEditor;
 using UnityEngine;
@@ -17,11 +18,20 @@ namespace DDEnum.Editor
 		private GUIContent m_buttonContent = new GUIContent();
 		private string m_selectedValue = "";
 
+		private bool m_hasSubset;
+		protected ValueResolver<IEnumerable<int>> m_subsetResolver;
+		
 		protected override void Initialize()
 		{
 			base.Initialize();
 
 			UpdateButtonText();
+			
+			var subset = Property.GetAttribute<SubsetAttribute>();
+			m_hasSubset = subset != null;
+			
+			if (subset != null)
+				m_subsetResolver = ValueResolver.Get<IEnumerable<int>>(Property, subset.Subset, DDEnumAssetBase<TDDEnumAsset>.Instance.ValidBits);
 		}
 
 		private void UpdateButtonText()
@@ -55,12 +65,17 @@ namespace DDEnum.Editor
 
 		protected override void DrawPropertyLayout(GUIContent label)
 		{
+			if (m_hasSubset)
+				m_subsetResolver.DrawError();
+			
 			GenericSelector<int>.DrawSelectorDropdown(label, m_buttonContent, CreateSelector);
 		}
 
 		private OdinSelector<int> CreateSelector(Rect rect)
 		{
-			var selector = new DDEnumSelector<TDDEnumAsset>(false);
+			var selector = m_hasSubset && !m_subsetResolver.HasError
+				? new DDEnumSelector<TDDEnumAsset>(false, m_subsetResolver.GetValue())
+				: new DDEnumSelector<TDDEnumAsset>(false);
 			
 			selector.SetSelection(ValueEntry.SmartValue.Value);
 			selector.ShowInPopup(rect);
