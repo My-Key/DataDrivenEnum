@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
+using Sirenix.OdinInspector.Editor.ValueResolvers;
 using Sirenix.Utilities;
 using Sirenix.Utilities.Editor;
 using UnityEditor;
@@ -24,11 +26,20 @@ namespace DDEnum.Editor
 		private List<string> m_selectedNames = new List<string>();
 		private List<int> m_selectedIndexes = new List<int>();
 
+		private bool m_hasSubset;
+		protected ValueResolver<TMask> m_subsetResolver;
+
 		protected override void Initialize()
 		{
 			base.Initialize();
 
 			UpdateButtonText();
+
+			var subset = Property.GetAttribute<SubsetAttribute>();
+			m_hasSubset = subset != null;
+
+			if (subset != null)
+				m_subsetResolver = ValueResolver.Get<TMask>(Property, subset.Subset);
 		}
 
 		private void UpdateButtonText()
@@ -90,21 +101,33 @@ namespace DDEnum.Editor
 
 		protected override void DrawPropertyLayout(GUIContent label)
 		{
+			if (m_hasSubset)
+				m_subsetResolver.DrawError();
+			
 			GenericSelector<int>.DrawSelectorDropdown(label, m_buttonContent, CreateSelector);
 		}
 
 		private OdinSelector<int> CreateSelector(Rect rect)
 		{
-			var selector = new DDEnumSelector<TDDEnumAsset>(true);
+			var hasSubset = m_hasSubset && !m_subsetResolver.HasError;
+
+			var selector = hasSubset
+				? new DDEnumSelector<TDDEnumAsset>(true, m_subsetResolver.GetValue().Select(x => x.Value))
+				: new DDEnumSelector<TDDEnumAsset>(true);
 
 			var currentValue = ValueEntry.SmartValue.Value;
 
 			m_selectedList.Clear();
-			
-			for (int i = 0; i < DDEnumAssetBase<TDDEnumAsset>.MAX_LENGTH; i++)
+
+			var validBits = DDEnumAssetBase<TDDEnumAsset>.Instance.ValidBits;
+
+			if (hasSubset)
+				validBits = m_subsetResolver.GetValue().Select(x => x.Value);
+
+			foreach (var validBit in validBits)
 			{
-				if ((currentValue & 1L << i) != 0)
-					m_selectedList.Add(i);
+				if ((currentValue & 1L << validBit) != 0)
+					m_selectedList.Add(validBit);
 			}
 			
 			selector.CheckboxToggle = true;
@@ -134,9 +157,6 @@ namespace DDEnum.Editor
 					smartValue.Value = value;
 					ValueEntry.SmartValue = smartValue;
 
-					// var smartValue = ValueEntry.SmartValue;
-					// smartValue.Value = value;
-					// ValueEntry.SmartValue = smartValue;
 					ValueEntry.ApplyChanges();
 				});
 			};
@@ -152,10 +172,23 @@ namespace DDEnum.Editor
 	{
 		private readonly FieldInfo m_requestCheckboxUpdate;
 
+		private List<int> m_validBits;
+		
+		public DDEnumSelector(bool multiSelect, IEnumerable<int> bits) : base(DDEnumAssetBase<TDDEnumAsset>.Instance.name,
+			bits, multiSelect, GetMenuItemName)
+		{
+			CheckboxToggle = multiSelect;
+			m_validBits = bits.ToList();
+			
+			m_requestCheckboxUpdate = typeof(GenericSelector<int>).GetField("requestCheckboxUpdate",
+				BindingFlags.NonPublic | BindingFlags.Instance);
+		}
+
 		public DDEnumSelector(bool multiSelect) : base(DDEnumAssetBase<TDDEnumAsset>.Instance.name,
 			DDEnumAssetBase<TDDEnumAsset>.Instance.ValidBits, multiSelect, GetMenuItemName)
 		{
 			CheckboxToggle = multiSelect;
+			m_validBits = DDEnumAssetBase<TDDEnumAsset>.Instance.ValidBits.ToList();
 			
 			m_requestCheckboxUpdate = typeof(GenericSelector<int>).GetField("requestCheckboxUpdate",
 				BindingFlags.NonPublic | BindingFlags.Instance);
@@ -168,8 +201,7 @@ namespace DDEnum.Editor
 			base.BuildSelectionTree(tree);
 			
 			tree.EnumerateTree().ForEach(AddInfo);
-			// tree.EnumerateTree().ForEach(AddIconSDF);
-			tree.EnumerateTree().AddIcons(AddIcon);
+			tree.EnumerateTree().ForEach(AddIconSDF);
 		}
 		
 		private void AddInfo(OdinMenuItem menuItem)
@@ -184,42 +216,24 @@ namespace DDEnum.Editor
 			
 			menuItem.OnDrawItem += DrawInfo;
 		}
-
-		private Texture2D AddIcon(OdinMenuItem menuItem)
-		{
-			if (menuItem.Value == null)
-				return null;
-			
-			var entry = GetMenuItemEntry((int)menuItem.Value);
-			
-			if (entry == null)
-				return null;
-			
-			var icon = entry.Icon;
-			
-			if (icon == SdfIconType.None)
-				return null;
-
-			return SdfIcons.CreateTransparentIconTexture(icon, EditorStyles.label.normal.textColor, 18, 18, 0);
-		}
 		
-		// SDF icons don't render correctly for mask selector
 		private void AddIconSDF(OdinMenuItem menuItem)
 		{
 			if (menuItem.Value == null)
+			{
+				menuItem.SdfIcon = SdfIconType.None;
 				return;
+			}
 			
 			var entry = GetMenuItemEntry((int)menuItem.Value);
 			
 			if (entry == null)
+			{
+				menuItem.SdfIcon = SdfIconType.None;
 				return;
-			
-			var icon = entry.Icon;
-			
-			if (icon == SdfIconType.None)
-				return;
+			}
 
-			menuItem.SdfIcon = icon;
+			menuItem.SdfIcon = entry.Icon;
 			menuItem.SdfIconColor = Color.white;
 		}
 
@@ -253,7 +267,7 @@ namespace DDEnum.Editor
 
 				if (GUILayout.Button("All"))
 				{
-					SetSelection(DDEnumAssetBase<TDDEnumAsset>.Instance.ValidBits);
+					SetSelection(m_validBits);
 
 					m_requestCheckboxUpdate.SetValue(this, true);
 					TriggerSelectionChanged();

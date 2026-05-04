@@ -2,6 +2,7 @@
 using System.Linq;
 using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
+using Sirenix.OdinInspector.Editor.ValueResolvers;
 using Sirenix.Utilities.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -244,7 +245,7 @@ namespace DDEnum.Editor
 		private void UpdateNames()
 		{
 			var instance = DDEnumAssetBase<TDDEnumAsset>.Instance;
-			var validBits = instance.ValidBits;
+			IEnumerable<int> validBits = GetBits();
 			var count = validBits.Count();
 
 			var needToRecalculateRows = false;
@@ -374,6 +375,8 @@ namespace DDEnum.Editor
 		protected abstract bool IsSelected(int bitIndex);
 
 		protected abstract void Select(int bitIndex);
+		
+		protected abstract IEnumerable<int> GetBits();
 
 		public void PopulateGenericMenu(InspectorProperty property, GenericMenu genericMenu)
 		{
@@ -396,6 +399,12 @@ namespace DDEnum.Editor
 			valueEntrySmartValue.Value = bitIndex;
 			ValueEntry.SmartValue = valueEntrySmartValue;
 		}
+
+		protected override IEnumerable<int> GetBits()
+		{
+			var instance = DDEnumAssetBase<TDDEnumAsset>.Instance;
+			return instance.ValidBits;
+		}
 	}
 	
 
@@ -405,6 +414,21 @@ namespace DDEnum.Editor
 		where TValue : struct, IDDEnumValue<TDDEnumAsset, TValue>
 		where TMask : struct, IDDEnumMask<TDDEnumAsset, TValue, TMask>
 	{
+		
+		private bool m_hasSubset;
+		protected ValueResolver<TMask> m_subsetResolver;
+
+		protected override void Initialize()
+		{
+			base.Initialize();
+			
+			var subset = Property.GetAttribute<SubsetAttribute>();
+			m_hasSubset = subset != null;
+
+			if (subset != null)
+				m_subsetResolver = ValueResolver.Get<TMask>(Property, subset.Subset);
+		}
+
 		protected override bool IsSelected(int bitIndex) => (ValueEntry.SmartValue.Value & (1L << bitIndex)) != 0L;
 		
 		protected override void Select(int bitIndex)
@@ -412,6 +436,23 @@ namespace DDEnum.Editor
 			var valueEntrySmartValue = ValueEntry.SmartValue;
 			valueEntrySmartValue.Value ^= 1L << bitIndex;
 			ValueEntry.SmartValue = valueEntrySmartValue;
+		}
+
+		protected override void DrawPropertyLayout(GUIContent label)
+		{
+			if (m_hasSubset)
+				m_subsetResolver.DrawError();
+			
+			base.DrawPropertyLayout(label);
+		}
+
+		protected override IEnumerable<int> GetBits()
+		{
+			if (m_hasSubset && !m_subsetResolver.HasError)
+				return m_subsetResolver.GetValue().Select(x => x.Value);
+			
+			var instance = DDEnumAssetBase<TDDEnumAsset>.Instance;
+			return instance.ValidBits;
 		}
 	}
 }
